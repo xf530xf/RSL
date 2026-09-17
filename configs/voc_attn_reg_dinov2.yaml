@@ -1,0 +1,93 @@
+dataset:
+  root_dir: /path/to/VOCdevkit/VOC2012
+  name_list_dir: datasets/voc
+  num_classes: 21
+  crop_size: 320 # 320 for clip-16
+  resize_range: [512, 2048]
+  rescale_range: [0.5, 2.0]
+  ignore_index: 255
+
+work_dir:
+  dir: work_dir_voc_dinov2
+  ckpt_dir: checkpoints
+  pred_dir: predictions
+  segs_dir: segs
+  tb_logger_dir: tb_logger
+
+train:
+  split: train_aug
+  samples_per_gpu: 2 #4 #2
+  max_iters: 30000
+  cam_iters: 2000
+  eval_iters: 2000
+  log_iters: 200
+  ema_decay: 0.999
+  ema_replace_start: 2000
+  ema_ramp_iters: 10000
+  ema_conf_thresh: 0.7
+  ema_max_replace_ratio: 0.9
+
+
+val:
+  split: train
+
+optimizer:
+  type: AdamW
+  learning_rate: 2e-5 #2e-4
+  betas: [0.9, 0.999]
+  weight_decay: 0.01
+
+scheduler:
+  warmup_iter: 50 #1500
+  warmup_ratio: 1e-6
+  power: 1.0
+
+clip_init:
+  clip_pretrain_path: pretrained/ViT-B-16.pt
+  embedding_dim: 256
+  in_channels: [1024, 1024, 1024, 1024]
+  clip_flag: 16 # if VIT-B-16, set as 16
+  resize_long: 512
+
+#-----------------sam3--------------------------
+sam3_init:
+  sam3_model: 'facebook/sam3'
+
+#-----------------dinov2------------------------
+# DINOv2 backbones are loaded via torch.hub('facebookresearch/dinov2', <name>).
+# Patch size is 14 for all DINOv2 variants (set in the model, no need to change here).
+# Choose ONE block and match dino_fts_fuse_dim to the variant width:
+#   dinov2_vits14 / dinov2_vits14_reg -> 384
+#   dinov2_vitb14 / dinov2_vitb14_reg -> 768
+#   dinov2_vitl14 / dinov2_vitl14_reg -> 1024
+#   dinov2_vitg14 / dinov2_vitg14_reg -> 1536
+
+# dino_init:
+#   dino_model: 'dinov2_vits14'
+#   dino_fts_fuse_dim: 384
+#   decoder_layer: 3
+
+dino_init:
+  dino_model: 'dinov2_vitb14'
+  dino_fts_fuse_dim: 768
+  decoder_layer: 3
+
+# dino_init:
+#   dino_model: 'dinov2_vitl14'
+#   dino_fts_fuse_dim: 1024
+#   decoder_layer: 5
+
+#---------prototype contrastive learning--------
+prototype:
+  momentum: 0.999
+  temperature: 0.1
+  confidence_thresh: 0.7
+  loss_weight: 0.1
+
+#---------boundary-aware distillation-----------
+boundary:
+  temperature: 2.0
+  dilation: 2
+  kl_weight: 1.0
+  fidelity_weight: 1.0
+  loss_weight: 0.1
